@@ -1,0 +1,2 @@
+recordingId,locationId,frameRate,speedLimit,weekday,startTime,duration,numTracks,numVehicles,numVRUs,latLocation,lonLocation,xUtmOrigin,yUtmOrigin,orthoPxToMeter
+31,3,25.00000,13.88889,thursday,13,1025.80000,401,377,24,50.77880,6.16554,300127.08530,5629091.05870,0.00814635379575616
