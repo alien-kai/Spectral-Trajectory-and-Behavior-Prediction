@@ -160,7 +160,7 @@ def trainIters(n_epochs, train_dataloader, valid_dataloader, train2_dataloader, 
                                                                      encoder_stream2_optimizer,
                                                                      decoder_stream2_optimizer)
                 print_loss_total_stream2 += loss_stream2
-                print(f"loss_stream2: {loss_stream2}")
+                # print(f"loss_stream2: {loss_stream2}")
 
             # s1 is always true
             input_stream1_tensor = trainbatch_in_form
@@ -170,7 +170,7 @@ def trainIters(n_epochs, train_dataloader, valid_dataloader, train2_dataloader, 
             loss_stream1 = train_stream1(input_stream1_tensor, target_stream1_tensor, encoder_stream1, decoder_stream1,
                                          encoder_stream1_optimizer, decoder_stream1_optimizer, output_stream2_decoder,
                                          batch_agent_ids, test_middle, s2)
-            print(f"loss_stream1: {loss_stream1}")
+            # print(f"loss_stream1: {loss_stream1}")
             print_loss_total_stream1 += loss_stream1
 
 
@@ -181,7 +181,7 @@ def trainIters(n_epochs, train_dataloader, valid_dataloader, train2_dataloader, 
             # print_loss_avg_stream2 = print_loss_total_stream2 / print_every
             # print_loss_total_stream2 = 0
             print('stream2 average loss:', print_loss_total_stream2 / num_batches)
-            loss_streamw2_all.append(print_loss_total_stream2 / num_batches)
+            loss_stream2_all.append(print_loss_total_stream2 / num_batches)
 
             # print('%s (%d %d%%) %.4f' % (timeSince(start, epoch / n_epochs),epoch, epoch / n_epochs * 100, print_loss_avg_stream2))
         if epoch % save_every == 0:
@@ -252,7 +252,7 @@ def train_stream1(input_tensor, target_tensor, encoder, decoder, encoder_optimiz
     target_length = target_tensor.size(0)
 
     Hidden_State, _ = encoder.loop(input_tensor)
-    #mu_1, mu_2
+    #only mu_1, mu_2
     _, _, mu_1, mu_2, log_sigma_1, log_sigma_2, rho = decoder.loop(Hidden_State)
 
     encoder_optimizer.zero_grad()

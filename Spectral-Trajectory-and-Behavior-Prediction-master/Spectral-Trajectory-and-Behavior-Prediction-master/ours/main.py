@@ -22,9 +22,9 @@ MODEL_DIR = '../resources/trained_models/'
 # if os.path.exists(DIR + 'stream1_obs_data_train.pkl') and os.path.exists(DIR + 'stream1_pred_data_train.pkl'):
 #     raise ValueError("data missing")
 
-epochs = 1
+epochs = 20
 
-save_per_epochs = 1
+save_per_epochs = 10
 
 train_seq_len = 25 * 1
 pred_seq_len = 25 * 1

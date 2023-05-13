@@ -418,25 +418,25 @@ tr1, pr1 = data_for_stream1(DATA_DIR, train_seq_len=train, pred_seq_len=pred, fr
 save_to_pkl(DIR + 'stream1_obs_data_{}.pkl'.format(TYPE), tr1)
 save_to_pkl(DIR + 'stream1_pred_data_{}.pkl'.format(TYPE), pr1)
 
-tr2, pr2 = data_for_stream2(DATA_DIR, train_seq_len = train, pred_seq_len = pred, frame_lenth_cap = train+pred)
-
-save_to_pkl(DIR + 'stream2_obs_data_{}.pkl'.format(TYPE), tr2)
-save_to_pkl(DIR + 'stream2_pred_data_{}.pkl'.format(TYPE), pr2)
+# tr2, pr2 = data_for_stream2(DATA_DIR, train_seq_len = train, pred_seq_len = pred, frame_lenth_cap = train+pred)
 #
+# save_to_pkl(DIR + 'stream2_obs_data_{}.pkl'.format(TYPE), tr2)
+# save_to_pkl(DIR + 'stream2_pred_data_{}.pkl'.format(TYPE), pr2)
+# #
+# #
+# ##
+# tr_seq_2 = pickle.load(open('{}/{}'.format(DIR,NAME1), 'rb'))
+# print('computing train eigens for {} {}...'.format(DATA, TYPE))
+# eigs_train = compute_eigs(tr_seq_2, 'train')
+# # save_to_pkl(DIR + 'stream2_obs_eigs_{}{}.pkl'.format(TYPE, len(eigs_train)), eigs_train)
+# save_to_pkl(DIR + 'stream2_obs_eigs_{}.pkl'.format(TYPE), eigs_train)
+# del tr_seq_2
+# del eigs_train
 #
-##
-tr_seq_2 = pickle.load(open('{}/{}'.format(DIR,NAME1), 'rb'))
-print('computing train eigens for {} {}...'.format(DATA, TYPE))
-eigs_train = compute_eigs(tr_seq_2, 'train')
-# save_to_pkl(DIR + 'stream2_obs_eigs_{}{}.pkl'.format(TYPE, len(eigs_train)), eigs_train)
-save_to_pkl(DIR + 'stream2_obs_eigs_{}.pkl'.format(TYPE), eigs_train)
-del tr_seq_2
-del eigs_train
-
-pred_seq_2 = pickle.load(open('{}/{}'.format(DIR, NAME2), 'rb'))
-print('computing pred eigens for {} {}...'.format(DATA, TYPE))
-eigs_pred = compute_eigs(pred_seq_2, 'pred')
-#save_to_pkl(DIR + 'stream2_pred_eigs_{}{}.pkl'.format(TYPE, len(eigs_pred)), eigs_pred)
-save_to_pkl(DIR + 'stream2_pred_eigs_{}.pkl'.format(TYPE), eigs_pred)
-del pred_seq_2
-del eigs_pred
+# pred_seq_2 = pickle.load(open('{}/{}'.format(DIR, NAME2), 'rb'))
+# print('computing pred eigens for {} {}...'.format(DATA, TYPE))
+# eigs_pred = compute_eigs(pred_seq_2, 'pred')
+# #save_to_pkl(DIR + 'stream2_pred_eigs_{}{}.pkl'.format(TYPE, len(eigs_pred)), eigs_pred)
+# save_to_pkl(DIR + 'stream2_pred_eigs_{}.pkl'.format(TYPE), eigs_pred)
+# del pred_seq_2
+# del eigs_pred

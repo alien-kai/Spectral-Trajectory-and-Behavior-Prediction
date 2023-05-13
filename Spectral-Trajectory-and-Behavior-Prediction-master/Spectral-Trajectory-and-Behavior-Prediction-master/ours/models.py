@@ -159,10 +159,13 @@ class Decoder(nn.Module):
         self.stream = stream
         self.stream_specific_param = self.num_mog_params
         self.stream_specific_param = input_size if self.stream == 's2' else self.num_mog_params
+        #(5+2,2)
         self.fl = nn.Linear(self.stream_specific_param + hidden_size, hidden_size)
         self.il = nn.Linear(self.stream_specific_param + hidden_size, hidden_size)
         self.ol = nn.Linear(self.stream_specific_param + hidden_size, hidden_size)
         self.Cl = nn.Linear(self.stream_specific_param + hidden_size, hidden_size)
+
+        #mu_x,mu_y,sigma_x,sigma_y,rho
         self.linear1 = nn.Linear(cell_size, self.stream_specific_param)
         # self.one_lstm = nn.LSTMCell
         # self.linear2 = nn.Linear ( self.sampled_point_size ,  hidden_size )
@@ -210,14 +213,26 @@ class Decoder(nn.Module):
             input = nn.Parameter(torch.FloatTensor(np.asarray(gcn_feat)).cuda())
             input = torch.squeeze(input)
         # print(input)
+
+        #combine the input and hidden state
         combined = torch.cat((input, Hidden_State), 1)
+
+        #(0,1)
         f = torch.sigmoid(self.fl(combined))
+        # (0,1)
         i = torch.sigmoid(self.il(combined))
+        # (0,1)
         o = torch.sigmoid(self.ol(combined))
+        #(-1,1)
         C = torch.tanh(self.Cl(combined))
 
+        #(batch_size,2),(-1,1)
         Cell_State = f * Cell_State + i * C
+        #(-1,1)
         Hidden_State = o * torch.tanh(Cell_State)
+
+        # print(Cell_State.shape)
+        # print(Hidden_State.shape)
 
         return Hidden_State, Cell_State
 
@@ -227,6 +242,7 @@ class Decoder(nn.Module):
         if self.stream == 's2':
             Cell_State, out, stream2_output = self.initHidden()
         else:
+            #Cell_State:(batch_size,2),out:(batch_size,5)
             Cell_State, out = self.initHidden()
         #(batch_size,time_step,1)
         mu1_all, mu2_all, sigma1_all, sigma2_all, rho_all = self.initMogParams()
@@ -255,8 +271,8 @@ class Decoder(nn.Module):
         ########################################################
 
         #     mog_params = self.linear1(Hidden_State)
-        #     # mog_params = params.narrow ( -1 , 0 , params.size ()[ -1 ] - 1 )
-        #     out = mog_params
+        ##     mog_params = params.narrow ( -1 , 0 , params.size ()[ -1 ] - 1 )
+            # out = mog_params
         #     if self.stream == 's2':
         #         stream2_output[:, i, :] = out
         #     if self.stream == 's1':
@@ -278,14 +294,17 @@ class Decoder(nn.Module):
         #     return stream2_output, Hidden_State, Cell_State, mu1_all, mu2_all, sigma1_all, sigma2_all, rho_all
 
     def initHidden(self):
-        out = torch.randn(self.batch_size, self.num_mog_params, device=device) if self.stream == 's1' else torch.randn(
-            self.batch_size, self.hidden_size, device=device)
+        #cellstate, out, output is random
+        # s1:(batch_size,5) s2:(batch_size,2)
+        out = torch.randn(self.batch_size, self.num_mog_params, device=device) if self.stream == 's1' else torch.randn(self.batch_size, self.hidden_size, device=device)
         if self.stream == 's2':
+            #output:(batch_size,time_step,hidden_size)
             output = torch.randn(self.batch_size, self.time_step, self.hidden_size, device=device)
             return torch.randn(self.batch_size, self.hidden_size, device=device), out, output
         else:
             return torch.randn(self.batch_size, self.hidden_size, device=device), out
 
+    #define size of mu1,mu2,sigma1,sigma2,rho
     def initMogParams(self):
         mu1_all = torch.rand(self.batch_size, self.time_step, 1, device=device) * 100
         mu2_all = torch.rand(self.batch_size, self.time_step, 1, device=device) * 100

@@ -97,8 +97,9 @@ pred=np.array(pred)
 
 #(batch_size, pred_size, [x,y])
 print(pred.shape)
-print(pred[30,1,:])
-print(label[30,1,:])
+
+print(f"pred:{pred[30,2,:]}")
+print(f"label:{label[30,2,:]}")
 
 # x_pred=[ x for x in pred[500,:,:][0]]
 # y_pred=[ y for y in pred[500,:,:][1]]

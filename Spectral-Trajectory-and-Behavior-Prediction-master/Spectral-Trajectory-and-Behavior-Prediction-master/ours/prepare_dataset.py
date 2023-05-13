@@ -30,6 +30,7 @@ recording=pd.read_csv(recording_meta_file)
 # end_frame=max(tracks[tracks.trackId==agentID]['frame'])
 start_frame=0
 end_frame= 100
+# end_frame=max(tracks['frame'])
 
 print(f"agentID: {agentID}")
 print(f"start_frame: {start_frame}")
