@@ -15,15 +15,31 @@ import matplotlib.pyplot as plt
 from scipy.sparse.linalg import eigs
 from torch.autograd import Variable
 from tqdm import tqdm
+import pandas as pd
+from main import *
 
 DATA = 'OTH'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
-BATCH_SIZE = 32
+# BATCH_SIZE = 32
 MU = 5
-MODEL_LOC = '../resources/trained_models/Ours/{}'
-SAVE_LOC='../resources/plots/{}/'.format(DATA)
 
+# recording = 2
+#
+#
+# recording = "{:02d}".format(int(recording))
+# tracks_file = f"../rounD-dataset-v1.0/data/{recording}_tracks.csv"
+# tracks=pd.read_csv(tracks_file)
+#
+# start_frame=min(tracks['frame'])
+# end_frame=max(tracks['frame'])
+MODEL_LOC = f'../resources/trained_models/{recording}/{BS}/{start_frame}_{end_frame}/'
+SAVE_LOC=f'../resources/plots/{recording}/{BS}/{start_frame}_{end_frame}/'
+
+if not os.path.exists(MODEL_LOC):
+    os.makedirs(MODEL_LOC)
+if not os.path.exists(SAVE_LOC):
+    os.makedirs(SAVE_LOC)
 
 def load_batch(index, size, seq_ID, train_sequence_stream1, pred_sequence_stream_1, train_sequence_stream2,
                pred_sequence_stream2, train_eig_seq, pred_eig_seq):
@@ -69,7 +85,7 @@ def trainIters(n_epochs, train_dataloader, valid_dataloader, train2_dataloader, 
     plot_losses_stream2 = []
 
     output_stream2_decoder = None
-    num_batches = int(len(train_dataloader) / BATCH_SIZE)
+    num_batches = int(len(train_dataloader) / BS)
     # Stream1 DataS
     # inputs , labels = next ( iter ( train_dataloader ) )
     # [ batch_size , step_size , fea_size ] = inputs.size ()
@@ -80,8 +96,8 @@ def trainIters(n_epochs, train_dataloader, valid_dataloader, train2_dataloader, 
     decoder_stream1 = None
     encoder_stream2 = None
     decoder_stream2 = None
-    encoder1loc = os.path.join(MODEL_LOC.format(data), 'encoder_stream1_{}{}.pt'.format(data, sufix))
-    decoder1loc = os.path.join(MODEL_LOC.format(data), 'decoder_stream1_{}{}.pt'.format(data, sufix))
+    encoder1loc = os.path.join(MODEL_LOC, 'encoder_stream1.pt')
+    decoder1loc = os.path.join(MODEL_LOC, 'decoder_stream1.pt')
 
     train_raw = train_dataloader
     pred_raw = valid_dataloader
@@ -90,9 +106,9 @@ def trainIters(n_epochs, train_dataloader, valid_dataloader, train2_dataloader, 
     train_eig_raw = train_eig
     pred_eig_raw = val_eig
     # Initialize encoder, decoders for both streams
-    batch = load_batch(0, BATCH_SIZE, 'pred', train_raw, pred_raw, train2_raw, pred2_raw, train_eig_raw, pred_eig_raw)
+    batch = load_batch(0, BS, 'pred', train_raw, pred_raw, train2_raw, pred2_raw, train_eig_raw, pred_eig_raw)
     batch, _, _ = batch
-    batch_in_form = np.asarray([batch[i]['sequence'] for i in range(BATCH_SIZE)])
+    batch_in_form = np.asarray([batch[i]['sequence'] for i in range(BS)])
     batch_in_form = torch.Tensor(batch_in_form).to(device)
     #batch_size=32, step_size=25, fea_size=2
     [batch_size, step_size, fea_size] = np.shape(batch_in_form)
@@ -110,7 +126,7 @@ def trainIters(n_epochs, train_dataloader, valid_dataloader, train2_dataloader, 
     # decoder_stream1.load_state_dict(torch.load(decoder1loc))
     # decoder_stream1.eval()
     if s2 is True:
-        batch = load_batch(0, BATCH_SIZE, 'pred', train_raw, pred_raw, train2_raw, pred2_raw, train_eig_raw,
+        batch = load_batch(0, BS, 'pred', train_raw, pred_raw, train2_raw, pred2_raw, train_eig_raw,
                            pred_eig_raw)
         _, _, batch = batch
         batch = np.asarray([batch[i] for i in range(len(batch))])
@@ -134,16 +150,16 @@ def trainIters(n_epochs, train_dataloader, valid_dataloader, train2_dataloader, 
         # Prepare train and test batch
         for bch in tqdm(range(num_batches),desc='train'):
             # print('# {}/{} epoch {}/{} batch'.format(epoch, n_epochs, bch, num_batches))
-            trainbatch_both = load_batch(bch, BATCH_SIZE, 'train', train_raw, pred_raw, train2_raw, pred2_raw,
+            trainbatch_both = load_batch(bch, BS, 'train', train_raw, pred_raw, train2_raw, pred2_raw,
                                          train_eig_raw, pred_eig_raw)
             trainbatch, train_middle, trainbatch2 = trainbatch_both
-            trainbatch_in_form = np.asarray([trainbatch[i]['sequence'] for i in range(BATCH_SIZE)])
+            trainbatch_in_form = np.asarray([trainbatch[i]['sequence'] for i in range(BS)])
             trainbatch_in_form = torch.Tensor(trainbatch_in_form).to(device)
 
-            testbatch_both = load_batch(bch, BATCH_SIZE, 'pred', train_raw, pred_raw, train2_raw, pred2_raw,
+            testbatch_both = load_batch(bch, BS, 'pred', train_raw, pred_raw, train2_raw, pred2_raw,
                                         train_eig_raw, pred_eig_raw)
             testbatch, test_middle, testbatch2 = testbatch_both
-            testbatch_in_form = np.asarray([testbatch[i]['sequence'] for i in range(BATCH_SIZE)])
+            testbatch_in_form = np.asarray([testbatch[i]['sequence'] for i in range(BS)])
             testbatch_in_form = torch.Tensor(testbatch_in_form).to(device)
             # for data in train_dataloader:
 
@@ -165,7 +181,7 @@ def trainIters(n_epochs, train_dataloader, valid_dataloader, train2_dataloader, 
             # s1 is always true
             input_stream1_tensor = trainbatch_in_form
             #i个batch的agent_ID
-            batch_agent_ids = [trainbatch[i]['agent_ID'] for i in range(BATCH_SIZE)]
+            batch_agent_ids = [trainbatch[i]['agent_ID'] for i in range(BS)]
             target_stream1_tensor = testbatch_in_form
             loss_stream1 = train_stream1(input_stream1_tensor, target_stream1_tensor, encoder_stream1, decoder_stream1,
                                          encoder_stream1_optimizer, decoder_stream1_optimizer, output_stream2_decoder,
@@ -196,11 +212,11 @@ def trainIters(n_epochs, train_dataloader, valid_dataloader, train2_dataloader, 
     # plot_loss_total_stream2 = 0
 
     #draw stream1 loss
-    makeplot(range(n_epochs), loss_stream1_all, "epoch", "loss", f"stream1_loss_{n_epochs}",
+    makeplot(range(n_epochs), loss_stream1_all, "epoch", "loss", f"stream1_loss_{batch_size}_{n_epochs}",
              SAVE_LOC)
     #draw stream2 loss
     if s2 is True:
-        makeplot(range(n_epochs), loss_stream2_all, "epoch", "loss", f"stream2_loss_{n_epochs}",
+        makeplot(range(n_epochs), loss_stream2_all, "epoch", "loss", f"stream2_loss_{batch_size}_{n_epochs}",
                  SAVE_LOC)
 
     compute_accuracy_stream1(train_dataloader, valid_dataloader, encoder_stream1, decoder_stream1, n_epochs)
@@ -225,9 +241,9 @@ def eval(epochs, tr_seq_1, pred_seq_1, data, sufix, learning_rate=1e-3, loc=MODE
     #    train2_raw = tr_seq_2
     #    pred2_raw = pred_seq_2
     # Initialize encoder, decoders for both streams
-    batch = load_batch(0, BATCH_SIZE, 'pred', train_raw, pred_raw, [], [], [], [])
+    batch = load_batch(0, BS, 'pred', train_raw, pred_raw, [], [], [], [])
     batch, _, _ = batch
-    batch_in_form = np.asarray([batch[i]['sequence'] for i in range(BATCH_SIZE)])
+    batch_in_form = np.asarray([batch[i]['sequence'] for i in range(BS)])
     batch_in_form = torch.Tensor(batch_in_form)
     [batch_size, step_size, fea_size] = np.shape(batch_in_form)
     input_dim = fea_size
@@ -275,15 +291,15 @@ def train_stream1(input_tensor, target_tensor, encoder, decoder, encoder_optimiz
 
 def save_model(encoder_stream1, decoder_stream1, encoder_stream2, decoder_stream2, data, sufix, s2, loc=MODEL_LOC):
     torch.save(encoder_stream1.state_dict(),
-               os.path.join(loc.format(data), 'encoder_stream1_{}{}.pt'.format(data, sufix)))
+               os.path.join(loc, 'encoder_stream1.pt'))
     torch.save(decoder_stream1.state_dict(),
-               os.path.join(loc.format(data), 'decoder_stream1_{}{}.pt'.format(data, sufix)))
+               os.path.join(loc, 'decoder_stream1.pt'))
     if s2:
         torch.save(encoder_stream2.state_dict(),
-                   os.path.join(loc.format(data), 'encoder_stream2_{}{}.pt'.format(data, sufix)))
+                   os.path.join(loc, 'encoder_stream2.pt'))
         torch.save(decoder_stream2.state_dict(),
-                   os.path.join(loc.format(data), 'decoder_stream2_{}{}.pt'.format(data, sufix)))
-    print('model saved at {}'.format(loc.format(data)))
+                   os.path.join(loc, 'decoder_stream2.pt'))
+    print('model saved at {}'.format(loc))
 
 
 def train_stream2(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, decoder_optimizer):
@@ -349,7 +365,8 @@ def log_likelihood(mu_1, mu_2, log_sigma_1, log_sigma_2, rho, y, cluster_centers
         #         torch.sum((mu1_current - muc_x) ** 2) + torch.sum((mu2_current - muc_y) ** 2))
         #
 
-        #MSE
+    ##############################################################
+        # MSE
         loss=nn.MSELoss().to(device)
         label= y[:, i, :]
         pred=torch.squeeze(torch.stack((mu1_current,mu2_current),dim=2))
@@ -367,6 +384,9 @@ def log_likelihood(mu_1, mu_2, log_sigma_1, log_sigma_2, rho, y, cluster_centers
         #     print(pred)
         epoch_loss += batch_loss
     # print(epoch_loss)
+    ##############################################################
+
+
     return epoch_loss
 
 
@@ -512,12 +532,12 @@ def compute_accuracy_stream1(traindataloader, labeldataloader, encoder, decoder,
         # Prepare train and test batch
         if epoch % (int(n_epochs / 10) + 1) == 0:
             print("{}/{} in computing accuracy...".format(epoch, n_epochs))
-        trainbatch_both = load_batch(epoch, BATCH_SIZE, 'train', train_raw, pred_raw, train2_raw, pred2_raw, [], [])
+        trainbatch_both = load_batch(epoch, BS, 'train', train_raw, pred_raw, train2_raw, pred2_raw, [], [])
         trainbatch, trainbatch2, _ = trainbatch_both
         trainbatch_in_form = np.asarray([trainbatch[i]['sequence'] for i in range(len(trainbatch))])
         trainbatch_in_form = torch.Tensor(trainbatch_in_form)
 
-        testbatch_both = load_batch(epoch, BATCH_SIZE, 'pred', train_raw, pred_raw, train2_raw, pred2_raw, [], [])
+        testbatch_both = load_batch(epoch, BS, 'pred', train_raw, pred_raw, train2_raw, pred2_raw, [], [])
         testbatch, testbatch2, _ = testbatch_both
         testbatch_in_form = np.asarray([testbatch[i]['sequence'] for i in range(len(trainbatch))])
         testbatch_in_form = torch.Tensor(testbatch_in_form)

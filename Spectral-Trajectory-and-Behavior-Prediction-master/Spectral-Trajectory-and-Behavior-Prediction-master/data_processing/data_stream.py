@@ -3,18 +3,38 @@ import pickle
 from scipy.sparse.linalg import eigs
 from tqdm import tqdm
 from copy import deepcopy, copy
+import pandas as pd
+import os
+
+
 
 DATA = 'OTH'
 TYPE = 'train'
-DIR = '../resources/data/{}/'.format(DATA)
 NAME1 = 'stream2_obs_data_{}.pkl'.format(TYPE)
 NAME2 = 'stream2_pred_data_{}.pkl'.format(TYPE)
 FrameRate = 25
+
+##############################
 train = 1 * FrameRate  # 1s
 pred = 1 * FrameRate  # 1s
 BS = 32
-pre_ID = 9+1
-MAX_VALUE=1000
+recording = 2
+
+
+recording = "{:02d}".format(int(recording))
+tracks_file = f"../rounD-dataset-v1.0/data/{recording}_tracks.csv"
+tracks=pd.read_csv(tracks_file)
+
+# pre_ID = 9+1
+# MAX_VALUE=1000
+
+start_frame=min(tracks['frame'])
+end_frame=max(tracks['frame'])
+
+DIR = f'../resources/data/{recording}/{BS}/{start_frame}_{end_frame}/'
+###########################
+
+
 
 '''
 The DATA_DIR for data_for_stream1 and data_for_stream2 functions should be as below
@@ -412,11 +432,14 @@ DATA_DIR = 'resources/data/LYFT/val/valSet0.npy'        ## for LYFT val
 '''
 
 # Uncomment the below lines to generate and save the data_for_stream1 and data_for_stream 2. DATA_DIR needs to be given as explained above
-DATA_DIR = '../resources/data/TrainSet0.npy'
+DATA_DIR = f'../resources/data/{recording}/TrainSet_{start_frame}_{end_frame}.npy'
 tr1, pr1 = data_for_stream1(DATA_DIR, train_seq_len=train, pred_seq_len=pred, frame_lenth_cap=train + pred)
 
-save_to_pkl(DIR + 'stream1_obs_data_{}.pkl'.format(TYPE), tr1)
-save_to_pkl(DIR + 'stream1_pred_data_{}.pkl'.format(TYPE), pr1)
+if not os.path.exists(DIR):
+    os.makedirs(DIR)
+    save_to_pkl(DIR + 'stream1_obs_data_{}.pkl'.format(TYPE), tr1)
+    save_to_pkl(DIR + 'stream1_pred_data_{}.pkl'.format(TYPE), pr1)
+
 
 # tr2, pr2 = data_for_stream2(DATA_DIR, train_seq_len = train, pred_seq_len = pred, frame_lenth_cap = train+pred)
 #

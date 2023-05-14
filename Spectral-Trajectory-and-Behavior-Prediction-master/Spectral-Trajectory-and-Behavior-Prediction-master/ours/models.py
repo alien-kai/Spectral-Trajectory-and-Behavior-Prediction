@@ -226,7 +226,8 @@ class Decoder(nn.Module):
         #(-1,1)
         C = torch.tanh(self.Cl(combined))
 
-        #(batch_size,2),(-1,1)
+        #shape: (batch_size,2)
+        #(-1,1)
         Cell_State = f * Cell_State + i * C
         #(-1,1)
         Hidden_State = o * torch.tanh(Cell_State)

@@ -16,23 +16,31 @@ s2 = False
 TRAIN = True
 EVAL = False
 
-DIR = '../resources/data/{}/'.format(DATA)
-MODEL_DIR = '../resources/trained_models/'
+BS=32
+recording = 2
+recording = "{:02d}".format(int(recording))
+tracks_file = f"../rounD-dataset-v1.0/data/{recording}_tracks.csv"
+tracks=pd.read_csv(tracks_file)
+start_frame=min(tracks['frame'])
+end_frame=max(tracks['frame'])
+
+DIR = f'../resources/data/{recording}/{BS}/{start_frame}_{end_frame}/'
+MODEL_DIR = f'../resources/trained_models/{recording}/{BS}/{start_frame}_{end_frame}/'
 
 # if os.path.exists(DIR + 'stream1_obs_data_train.pkl') and os.path.exists(DIR + 'stream1_pred_data_train.pkl'):
 #     raise ValueError("data missing")
 
-epochs = 20
+epochs = 1
 
-save_per_epochs = 10
+save_per_epochs = 1
 
 train_seq_len = 25 * 1
 pred_seq_len = 25 * 1
 
 #create folder to store plots
-plot_dir = '../resources/plots/'
-if not os.path.exists('../resources/plots/{}/'.format(DATA)):
-    os.makedirs('../resources/plots/{}/'.format(DATA))
+plot_dir = f'../resources/plots/{recording}/{BS}/{start_frame}_{end_frame}/'
+if not os.path.exists(plot_dir):
+    os.makedirs(plot_dir)
 
 if __name__ == "__main__":
 

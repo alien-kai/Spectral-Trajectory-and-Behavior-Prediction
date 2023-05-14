@@ -2,6 +2,9 @@ import numpy as np
 # from loguru import logger
 import pandas as pd
 from tqdm import tqdm
+import os
+
+
 
 pd.set_option('display.max_rows', None) # 展示所有行
 pd.set_option('display.max_columns', None) # 展示所有列
@@ -9,8 +12,8 @@ pd.set_option('display.max_columns', None) # 展示所有列
 dataset_dir = '../rounD-dataset-v1.0/data/'
 recording = 2
 
-#选取某一个agent
-agentID=9
+# #选取某一个agent
+# agentID=9
 
 
 recording = "{:02d}".format(int(recording))
@@ -19,20 +22,21 @@ print(f"Loading recording {recording} from dataset rounD")
 
 # Create paths to csv files
 tracks_file = dataset_dir + recording + "_tracks.csv"
-tracks_meta_file = dataset_dir + recording + "_tracksMeta.csv"
-recording_meta_file = dataset_dir + recording + "_recordingMeta.csv"
+# tracks_meta_file = dataset_dir + recording + "_tracksMeta.csv"
+# recording_meta_file = dataset_dir + recording + "_recordingMeta.csv"
 
 tracks=pd.read_csv(tracks_file)
-recording=pd.read_csv(recording_meta_file)
 
 #选取开始和结束帧
 # start_frame=min(tracks[tracks.trackId==agentID]['frame'])
 # end_frame=max(tracks[tracks.trackId==agentID]['frame'])
-start_frame=0
-end_frame= 100
-# end_frame=max(tracks['frame'])
+# start_frame=0
+# end_frame= 100
 
-print(f"agentID: {agentID}")
+start_frame=min(tracks['frame'])
+end_frame=max(tracks['frame'])
+
+# print(f"agentID: {agentID}")
 print(f"start_frame: {start_frame}")
 print(f"end_frame: {end_frame}")
 print(f"total_frame: {end_frame-start_frame}")
@@ -62,13 +66,20 @@ res['frame']=tqdm(res['frame'].apply(lambda x:x-start_frame+1))
 #set trackId to [1-n]
 res['trackId']=tqdm(res['trackId'].apply(lambda x:x+1))
 
-print(res.tail())
-print(res.describe())
-print(np.unique(res.trackId))
+# print(res.tail())
+# print(res.describe())
+# print(np.unique(res.trackId))
 
 
+#check folder exists
+recording_path=f'../resources/data/{recording}/'
+if not os.path.exists(recording_path):
+    os.makedirs(recording_path)
 # save to npy
-np.save('../resources/data/TrainSet0.npy', res)
+train_path=recording_path+f'TrainSet_{start_frame}_{end_frame}.npy'
+if not os.path.exists(train_path):
+    np.save(train_path, res)
+
 
 # print(recording.columns)
 # print(recording['frameRate'][0])

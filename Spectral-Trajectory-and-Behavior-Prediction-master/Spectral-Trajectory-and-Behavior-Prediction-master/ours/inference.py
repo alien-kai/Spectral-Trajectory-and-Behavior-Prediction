@@ -8,20 +8,22 @@ from models import *
 import pickle
 from matplotlib import pyplot as plt
 import numpy as np
+from main import *
 
-loc='../resources/trained_models/Ours/{}'
-data = 'OTH'
-sufix = '1stS15-5'
+loc=f'../resources/trained_models/{recording}/{BS}/{start_frame}_{end_frame}/'
 train_seq_len = 25 * 1
 pred_seq_len = 25 * 1
-DIR = '../resources/data/{}/'.format(data)
-learning_rate=1e-3
-SAVE_LOC='../resources/plot/{}/'.format(data)
 
-encoder1loc = os.path.join(loc.format(data), 'encoder_stream1_{}{}.pt'.format(data, sufix))
-decoder1loc = os.path.join(loc.format(data), 'decoder_stream1_{}{}.pt'.format(data, sufix))
-encoder2loc = os.path.join(loc.format(data), 'encoder_stream2_{}{}.pt'.format(data, sufix))
-decoder2loc = os.path.join(loc.format(data), 'decoder_stream2_{}{}.pt'.format(data, sufix))
+# BS=32
+
+DIR = f'../resources/data/{recording}/{BS}/{start_frame}_{end_frame}/'
+learning_rate=1e-3
+SAVE_LOC=f'../resources/plot/{recording}/{BS}/{start_frame}_{end_frame}/'
+
+encoder1loc = os.path.join(loc, 'encoder_stream1.pt')
+decoder1loc = os.path.join(loc, 'decoder_stream1.pt')
+encoder2loc = os.path.join(loc, 'encoder_stream2.pt')
+decoder2loc = os.path.join(loc, 'decoder_stream2.pt')
 
 f1 = open(DIR + 'stream1_obs_data_train.pkl', 'rb')  # 'r' for reading; can be omitted
 g1 = open(DIR + 'stream1_pred_data_train.pkl', 'rb')  # 'r' for reading; can be omitted
@@ -35,10 +37,10 @@ pred_raw = pred_seq_1
 #    train2_raw = tr_seq_2
 #    pred2_raw = pred_seq_2
 # Initialize encoder, decoders for both streams
-batch = load_batch(0, BATCH_SIZE, 'pred', train_raw, pred_raw, [], [], [], [])
+batch = load_batch(0, BS, 'pred', train_raw, pred_raw, [], [], [], [])
 print("load_batch completed")
 batch, _, _ = batch
-batch_in_form = np.asarray([batch[i]['sequence'] for i in range(BATCH_SIZE)])
+batch_in_form = np.asarray([batch[i]['sequence'] for i in range(BS)])
 batch_in_form = torch.Tensor(batch_in_form)
 [batch_size, step_size, fea_size] = np.shape(batch_in_form)
 input_dim = fea_size
@@ -62,12 +64,12 @@ pred2_raw = []
 
 epoch=0
 
-trainbatch_both = load_batch(epoch, BATCH_SIZE, 'train', train_raw, pred_raw, train2_raw, pred2_raw, [], [])
+trainbatch_both = load_batch(epoch, BS, 'train', train_raw, pred_raw, train2_raw, pred2_raw, [], [])
 trainbatch, trainbatch2, _ = trainbatch_both
 trainbatch_in_form = np.asarray([trainbatch[i]['sequence'] for i in range(len(trainbatch))])
 trainbatch_in_form = torch.Tensor(trainbatch_in_form)
 print("train_batch completed")
-testbatch_both = load_batch(epoch, BATCH_SIZE, 'pred', train_raw, pred_raw, train2_raw, pred2_raw, [], [])
+testbatch_both = load_batch(epoch, BS, 'pred', train_raw, pred_raw, train2_raw, pred2_raw, [], [])
 testbatch, testbatch2, _ = testbatch_both
 testbatch_in_form = np.asarray([testbatch[i]['sequence'] for i in range(len(testbatch))])
 testbatch_in_form = torch.Tensor(testbatch_in_form)
