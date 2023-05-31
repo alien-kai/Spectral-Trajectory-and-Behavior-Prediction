@@ -7,6 +7,9 @@ import pandas as pd
 from def_train_eval import *
 import pickle
 import os
+from warnings import simplefilter
+simplefilter(action='ignore', category=FutureWarning)
+
 
 DATA = 'OTH'
 SUFIX = '1stS15-5'
@@ -15,27 +18,31 @@ device = torch.device("cuda")
 s2 = False
 TRAIN = True
 EVAL = False
+graph= False
 
-BS=32
+BS=256
 recording = 2
 recording = "{:02d}".format(int(recording))
 tracks_file = f"../rounD-dataset-v1.0/data/{recording}_tracks.csv"
 tracks=pd.read_csv(tracks_file)
 start_frame=min(tracks['frame'])
 end_frame=max(tracks['frame'])
+# end_frame= 1000
 
 DIR = f'../resources/data/{recording}/{BS}/{start_frame}_{end_frame}/'
 MODEL_DIR = f'../resources/trained_models/{recording}/{BS}/{start_frame}_{end_frame}/'
+if not os.path.exists(MODEL_DIR):
+    os.makedirs(MODEL_DIR)
 
-# if os.path.exists(DIR + 'stream1_obs_data_train.pkl') and os.path.exists(DIR + 'stream1_pred_data_train.pkl'):
-#     raise ValueError("data missing")
 
-epochs = 1
-
-save_per_epochs = 1
+epochs = 100
+save_per_epochs = 20
 
 train_seq_len = 25 * 1
 pred_seq_len = 25 * 1
+
+learning_rate=1e-3
+
 
 #create folder to store plots
 plot_dir = f'../resources/plots/{recording}/{BS}/{start_frame}_{end_frame}/'
@@ -83,7 +90,7 @@ if __name__ == "__main__":
             pred_eig_seq = []
 
         encoder1, decoder1 = trainIters(epochs, tr_seq_1, pred_seq_1, tr_seq_2, pred_seq_2, tr_eig_seq, pred_eig_seq,
-                                        DATA, SUFIX, s2, print_every=1, save_every=save_per_epochs)
+                                        DATA, SUFIX, s2, learning_rate=learning_rate,print_every=1, save_every=save_per_epochs)
 
     if EVAL:
         print('start evaluating {}{}...'.format(DATA, SUFIX))

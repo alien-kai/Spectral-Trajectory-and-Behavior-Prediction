@@ -3,17 +3,22 @@ import cv2
 import pandas as pd
 import json
 import numpy as np
+import matplotlib.pyplot as plt
 
-data = 'OTH'
-sufix = '1stS15-5'
+recording = 2
+recording = "{:02d}".format(int(recording))
+BS=256
+tracks_file = f"../rounD-dataset-v1.0/data/{recording}_tracks.csv"
+tracks=pd.read_csv(tracks_file)
+start_frame=min(tracks['frame'])
+end_frame=max(tracks['frame'])
+DIR = f'../resources/data/{recording}/{BS}/{start_frame}_{end_frame}/'
 
-DIR = 'D:/PycharmProjects/Spectral-Trajectory-and-Behavior-Prediction/Spectral-Trajectory-and-Behavior-Prediction-master/Spectral-Trajectory-and-Behavior-Prediction-master/resources/data/{}/'.format(
-    data)
-background_image_path=r'D:\rounD-dataset-v1.0\data\02_background.png'
-dataset_params_path=r'D:\PycharmProjects\drone-dataset-tools\drone-dataset-tools-master\data\visualizer_params\visualizer_params.json'
+background_image_path=f'../rounD-dataset-v1.0/data/{recording}_background.png'
+dataset_params_path='../visualizer_params.json'
 
 start_index = 0
-stop_index = 1024
+stop_index = 10000
 f1 = open(DIR + 'stream1_obs_data_train.pkl', 'rb')  # 'r' for reading; can be omitted
 g1 = open(DIR + 'stream1_pred_data_train.pkl', 'rb')  # 'r' for reading; can be omitted
 train_sequence_stream1 = pickle.load(f1)  # load file content as mydict
@@ -24,14 +29,16 @@ g1.close()
 stream1_train_batch = train_sequence_stream1[start_index:stop_index]
 stream1_pred_batch = pred_sequence_stream_1[start_index:stop_index]
 
+
 # print(stream1_train_batch[0]['sequence'])
 # print(stream1_pred_batch[0]['sequence'])
 print(f"agent_ID: {stream1_train_batch[0]['agent_ID']}")
 print(f"shape: {stream1_train_batch[0]['sequence'].shape}")
 
 
-background_image = cv2.cvtColor(cv2.imread(background_image_path), cv2.COLOR_BGR2RGB)
-import matplotlib.pyplot as plt
+background_image = cv2.imread(background_image_path)
+background_image = cv2.cvtColor(background_image,cv2.COLOR_BGR2RGB)
+
 # plt.title(f"batch:{1}")
 # plt.scatter(x_train,y_train,c='black')
 # plt.scatter(x_pred,y_pred,c='r')
@@ -41,7 +48,7 @@ import matplotlib.pyplot as plt
 # for i in range(len(x)):
 #     plt.annotate(int(id[i]),(x[i],y[i]))
 
-recording=pd.read_csv(r'D:\rounD-dataset-v1.0\data\02_recordingMeta.csv')
+recording=pd.read_csv(f'../rounD-dataset-v1.0/data/{recording}_recordingMeta.csv')
 ortho_px_to_meter=recording['orthoPxToMeter'].values[0]
 print("ortho_px_to_meter: {}".format(ortho_px_to_meter))
 with open(dataset_params_path) as f:
@@ -86,21 +93,20 @@ for i in range(len(stream1_train_batch)):
     if stream1_train_batch[i]['agent_ID'] not in agent_ID:
         batch_ID.append(i)
         agent_ID.append(stream1_train_batch[i]['agent_ID'])
-print(batch_ID)
-print(agent_ID)
+print(f"batch_ID:{batch_ID}")
+print(f"agent_ID:{agent_ID}")
 
 for i in batch_ID:
-    center_point_train, center_point_pred=calculate_center(i)
+    center_point_train, center_point_pred = calculate_center(i)
     for center in center_point_train:
         Drawing_colored_circle=plt.Circle(center, radius=0.5, color='blue')
         ax.add_artist(Drawing_colored_circle)
     for center in center_point_pred:
         Drawing_colored_circle=plt.Circle(center, radius=0.5, color='red')
         ax.add_artist(Drawing_colored_circle)
-    ax.text(center_point_pred[0][0], center_point_pred[0][1], "ID: " + str(stream1_train_batch[i]['agent_ID']),
-            fontsize=10, color='black')
+    ax.text(center_point_pred[0][0], center_point_pred[0][1], "ID: " + str(stream1_train_batch[i]['agent_ID']),fontsize=10, color='black')
 
 
 ax.axis('off')
-# plt.show()
-plt.savefig('show_stream1.png')
+plt.show()
+# plt.savefig('show_stream1.png')

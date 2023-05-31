@@ -14,14 +14,14 @@ loc=f'../resources/trained_models/{recording}/{BS}/{start_frame}_{end_frame}/'
 train_seq_len = 25 * 1
 pred_seq_len = 25 * 1
 
-# BS=32
 
 DIR = f'../resources/data/{recording}/{BS}/{start_frame}_{end_frame}/'
-learning_rate=1e-3
+# learning_rate=1e-3
 SAVE_LOC=f'../resources/plot/{recording}/{BS}/{start_frame}_{end_frame}/'
 
-encoder1loc = os.path.join(loc, 'encoder_stream1.pt')
-decoder1loc = os.path.join(loc, 'decoder_stream1.pt')
+encoder1loc = os.path.join(loc, f'encoder_stream1_{BS}_{epochs}_{learning_rate}_{graph}.pt')
+decoder1loc = os.path.join(loc, f'decoder_stream1_{BS}_{epochs}_{learning_rate}_{graph}.pt')
+
 encoder2loc = os.path.join(loc, 'encoder_stream2.pt')
 decoder2loc = os.path.join(loc, 'decoder_stream2.pt')
 
@@ -103,11 +103,14 @@ print(pred.shape)
 print(f"pred:{pred[30,2,:]}")
 print(f"label:{label[30,2,:]}")
 
-# x_pred=[ x for x in pred[500,:,:][0]]
-# y_pred=[ y for y in pred[500,:,:][1]]
-# x_true=[ x for x in label[500,:,:][0]]
-# y_true=[ y for y in label[500,:,:][1]]
-#
+
+# #selec a specific sample
+# batch_idx=30
+# x_pred=[ x for x in pred[batch_idx,:,:][0]]
+# y_pred=[ y for y in pred[batch_idx,:,:][1]]
+# x_true=[ x for x in label[batch_idx,:,:][0]]
+# y_true=[ y for y in label[batch_idx,:,:][1]]
+# #
 # plt.figure()
 # plt.title('predict')
 # plt.plot(x_pred,y_pred)

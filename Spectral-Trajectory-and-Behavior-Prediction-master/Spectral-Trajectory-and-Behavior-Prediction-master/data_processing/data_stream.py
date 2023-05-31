@@ -17,7 +17,7 @@ FrameRate = 25
 ##############################
 train = 1 * FrameRate  # 1s
 pred = 1 * FrameRate  # 1s
-BS = 32
+BS = 128
 recording = 2
 
 
@@ -29,7 +29,8 @@ tracks=pd.read_csv(tracks_file)
 # MAX_VALUE=1000
 
 start_frame=min(tracks['frame'])
-end_frame=max(tracks['frame'])
+# end_frame=max(tracks['frame'])
+end_frame = 1000
 
 DIR = f'../resources/data/{recording}/{BS}/{start_frame}_{end_frame}/'
 ###########################
@@ -344,6 +345,7 @@ def compute_eigs(train_stream2, typ):
     # train_stream2  = train_stream2[:5000]
     # print(len(train_stream2))
     # TRAIN_SEQ帧的data
+    # N is total object number
     N = int(train_stream2[0][list(train_stream2[0].keys())[-1]].shape[1])
     A = np.zeros([N, N])
     frame = {}
@@ -356,8 +358,7 @@ def compute_eigs(train_stream2, typ):
             # 每一帧中agentID的x,y
             for j in range(N):
                 try:
-                    frame[j] = [train_stream2[batch_idx][which_frame][0, j],
-                                train_stream2[batch_idx][which_frame][1, j]]
+                    frame[j] = [train_stream2[batch_idx][which_frame][0, j],train_stream2[batch_idx][which_frame][1, j]]
                 except:
                     pass
             for l in range(N):
@@ -365,19 +366,19 @@ def compute_eigs(train_stream2, typ):
                     # 4个neighbor
                     neighbors = computeKNN(frame, l, 4)
                 for neighbor in neighbors:
-                    # 对neighbor计算距离
-                    A[l][neighbor] = np.exp(
-                        -1 * computeDist(frame[l][0], frame[l][1], frame[neighbor][0], frame[neighbor][1]))
+                    # 对l和每个neighbor计算距离，其余坐标为0
+                    A[l][neighbor] = np.exp(-1 * computeDist(frame[l][0], frame[l][1], frame[neighbor][0], frame[neighbor][1]))
             # 每个neighbor距离之和
             d = [np.sum(A[row, :]) for row in range(A.shape[0])]
             # 对角线矩阵
             D = np.diag(d)
             # 拉普拉斯矩阵
             L = D - A
-            # 特征向量
+            # 特征向量,[agent_num,2]
             _, vecs = eigs(L, k=2, tol=1e-3)
-            # 保留了实数部分
+            # 保留了实数部分,[time_step,agent_num]
             eig_frame.append(np.real(vecs[:, 1]))
+        # [batch_size, time_step, agent_num]
         eig_batch.append(np.array(eig_frame))
     return np.array(eig_batch)
 
@@ -433,33 +434,33 @@ DATA_DIR = 'resources/data/LYFT/val/valSet0.npy'        ## for LYFT val
 
 # Uncomment the below lines to generate and save the data_for_stream1 and data_for_stream 2. DATA_DIR needs to be given as explained above
 DATA_DIR = f'../resources/data/{recording}/TrainSet_{start_frame}_{end_frame}.npy'
-tr1, pr1 = data_for_stream1(DATA_DIR, train_seq_len=train, pred_seq_len=pred, frame_lenth_cap=train + pred)
 
+#streame1
 if not os.path.exists(DIR):
     os.makedirs(DIR)
+    tr1, pr1 = data_for_stream1(DATA_DIR, train_seq_len=train, pred_seq_len=pred, frame_lenth_cap=train + pred)
     save_to_pkl(DIR + 'stream1_obs_data_{}.pkl'.format(TYPE), tr1)
     save_to_pkl(DIR + 'stream1_pred_data_{}.pkl'.format(TYPE), pr1)
 
+# stream2
+if not os.path.exists(DIR+'stream2_obs_data_{}.pkl'.format(TYPE)) and not os.path.exists(DIR+'stream2_pred_data_{}.pkl'.format(TYPE)):
+    tr2, pr2 = data_for_stream2(DATA_DIR, train_seq_len = train, pred_seq_len = pred, frame_lenth_cap = train+pred)
+    save_to_pkl(DIR + 'stream2_obs_data_{}.pkl'.format(TYPE), tr2)
+    save_to_pkl(DIR + 'stream2_pred_data_{}.pkl'.format(TYPE), pr2)
 
-# tr2, pr2 = data_for_stream2(DATA_DIR, train_seq_len = train, pred_seq_len = pred, frame_lenth_cap = train+pred)
-#
-# save_to_pkl(DIR + 'stream2_obs_data_{}.pkl'.format(TYPE), tr2)
-# save_to_pkl(DIR + 'stream2_pred_data_{}.pkl'.format(TYPE), pr2)
-# #
-# #
-# ##
-# tr_seq_2 = pickle.load(open('{}/{}'.format(DIR,NAME1), 'rb'))
-# print('computing train eigens for {} {}...'.format(DATA, TYPE))
-# eigs_train = compute_eigs(tr_seq_2, 'train')
-# # save_to_pkl(DIR + 'stream2_obs_eigs_{}{}.pkl'.format(TYPE, len(eigs_train)), eigs_train)
-# save_to_pkl(DIR + 'stream2_obs_eigs_{}.pkl'.format(TYPE), eigs_train)
-# del tr_seq_2
-# del eigs_train
-#
-# pred_seq_2 = pickle.load(open('{}/{}'.format(DIR, NAME2), 'rb'))
-# print('computing pred eigens for {} {}...'.format(DATA, TYPE))
-# eigs_pred = compute_eigs(pred_seq_2, 'pred')
-# #save_to_pkl(DIR + 'stream2_pred_eigs_{}{}.pkl'.format(TYPE, len(eigs_pred)), eigs_pred)
-# save_to_pkl(DIR + 'stream2_pred_eigs_{}.pkl'.format(TYPE), eigs_pred)
-# del pred_seq_2
-# del eigs_pred
+if not os.path.exists(DIR+'stream2_obs_eigs_{}.pkl'.format(TYPE)) and not os.path.exists(DIR+'stream2_pred_eigs_{}.pkl'.format(TYPE)):
+    tr_seq_2 = pickle.load(open('{}/{}'.format(DIR,NAME1), 'rb'))
+    print('computing train eigens for {} {}...'.format(DATA, TYPE))
+    eigs_train = compute_eigs(tr_seq_2, 'train')
+    # save_to_pkl(DIR + 'stream2_obs_eigs_{}{}.pkl'.format(TYPE, len(eigs_train)), eigs_train)
+    save_to_pkl(DIR + 'stream2_obs_eigs_{}.pkl'.format(TYPE), eigs_train)
+    del tr_seq_2
+    del eigs_train
+
+    pred_seq_2 = pickle.load(open('{}/{}'.format(DIR, NAME2), 'rb'))
+    print('computing pred eigens for {} {}...'.format(DATA, TYPE))
+    eigs_pred = compute_eigs(pred_seq_2, 'pred')
+    #save_to_pkl(DIR + 'stream2_pred_eigs_{}{}.pkl'.format(TYPE, len(eigs_pred)), eigs_pred)
+    save_to_pkl(DIR + 'stream2_pred_eigs_{}.pkl'.format(TYPE), eigs_pred)
+    del pred_seq_2
+    del eigs_pred

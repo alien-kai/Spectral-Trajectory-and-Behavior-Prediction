@@ -31,7 +31,7 @@ tracks=pd.read_csv(tracks_file)
 # start_frame=min(tracks[tracks.trackId==agentID]['frame'])
 # end_frame=max(tracks[tracks.trackId==agentID]['frame'])
 # start_frame=0
-# end_frame= 100
+# end_frame= 1000
 
 start_frame=min(tracks['frame'])
 end_frame=max(tracks['frame'])
@@ -71,14 +71,14 @@ res['trackId']=tqdm(res['trackId'].apply(lambda x:x+1))
 # print(np.unique(res.trackId))
 
 
-#check folder exists
-recording_path=f'../resources/data/{recording}/'
-if not os.path.exists(recording_path):
-    os.makedirs(recording_path)
-# save to npy
-train_path=recording_path+f'TrainSet_{start_frame}_{end_frame}.npy'
-if not os.path.exists(train_path):
-    np.save(train_path, res)
+# #check folder exists
+# recording_path=f'../resources/data/{recording}/'
+# if not os.path.exists(recording_path):
+#     os.makedirs(recording_path)
+# # save to npy
+# train_path=recording_path+f'TrainSet_{start_frame}_{end_frame}.npy'
+# if not os.path.exists(train_path):
+#     np.save(train_path, res)
 
 
 # print(recording.columns)
