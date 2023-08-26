@@ -9,7 +9,11 @@ import torch.nn as nn
 from torch import optim
 import torch.nn.functional as F
 import numpy as np
-from models import *
+
+#select models
+# from models import *
+from linear_model import *
+
 from sklearn.cluster import SpectralClustering, KMeans
 import matplotlib.pyplot as plt
 from scipy.sparse.linalg import eigs
@@ -21,23 +25,23 @@ from main import *
 DATA = 'OTH'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
-BS = 256
+# BS = 256
 MU = 5
 
 #intialize the loss1 and loss2
 loss_stream1=np.inf
 loss_stream2=np.inf
 
-recording = 2
-#
-#
-recording = "{:02d}".format(int(recording))
-tracks_file = f"../rounD-dataset-v1.0/data/{recording}_tracks.csv"
-tracks=pd.read_csv(tracks_file)
+# recording = 2
+# #
+# #
+# recording = "{:02d}".format(int(recording))
+# tracks_file = f"../rounD-dataset-v1.0/data/{recording}_tracks.csv"
+# tracks=pd.read_csv(tracks_file)
 
-start_frame=min(tracks['frame'])
-end_frame=max(tracks['frame'])
-MODEL_LOC = f'../resources/trained_models/{recording}/{BS}/{start_frame}_{end_frame}/'
+# start_frame=min(tracks['frame'])
+# end_frame=max(tracks['frame'])
+MODEL_LOC = MODEL_DIR
 SAVE_LOC=f'../resources/plots/{recording}/{BS}/{start_frame}_{end_frame}/'
 
 if not os.path.exists(MODEL_LOC):
@@ -45,8 +49,7 @@ if not os.path.exists(MODEL_LOC):
 if not os.path.exists(SAVE_LOC):
     os.makedirs(SAVE_LOC)
 
-def load_batch(index, size, seq_ID, train_sequence_stream1, pred_sequence_stream_1, train_sequence_stream2,
-               pred_sequence_stream2, train_eig_seq, pred_eig_seq):
+def load_batch(index, size, seq_ID, train_sequence_stream1, pred_sequence_stream_1, train_sequence_stream2, pred_sequence_stream2, train_eig_seq, pred_eig_seq):
     '''
     to load a batch of data
     :param index: index of the batch
@@ -121,12 +124,16 @@ def trainIters(n_epochs, train_dataloader, valid_dataloader, train2_dataloader, 
 
     encoder_stream1 = Encoder(input_dim, hidden_dim, output_dim).to(device)
     decoder_stream1 = Decoder('s1', input_dim, hidden_dim, output_dim, batch_size, step_size).to(device)
-    encoder_stream1_optimizer = optim.RMSprop(encoder_stream1.parameters(), lr=learning_rate)
-    decoder_stream1_optimizer = optim.RMSprop(decoder_stream1.parameters(), lr=learning_rate)
+    #RMSprop
+    # encoder_stream1_optimizer = optim.RMSprop(encoder_stream1.parameters(), lr=learning_rate)
+    # decoder_stream1_optimizer = optim.RMSprop(decoder_stream1.parameters(), lr=learning_rate)
+    #Adam
+    encoder_stream1_optimizer = optim.Adam(encoder_stream1.parameters(), lr=learning_rate)
+    decoder_stream1_optimizer = optim.Adam(decoder_stream1.parameters(), lr=learning_rate)
 
     #MultiStepLR(多步长衰减)：设置不同的学习率
-    encoder_stream1_scheduler = torch.optim.lr_scheduler.MultiStepLR(encoder_stream1_optimizer, milestones=[10, 50, 90], gamma=0.8)
-    decoder_stream1_scheduler = torch.optim.lr_scheduler.MultiStepLR(decoder_stream1_optimizer,milestones=[10, 50, 90], gamma=0.8)
+    encoder_stream1_scheduler = torch.optim.lr_scheduler.MultiStepLR(encoder_stream1_optimizer, milestones=[10, 50, 90,130,170,210,250,290], gamma=0.8)
+    decoder_stream1_scheduler = torch.optim.lr_scheduler.MultiStepLR(decoder_stream1_optimizer,milestones=[10, 50, 90,130,170,210,250,290], gamma=0.8)
     encoder_stream2_scheduler = torch.optim.lr_scheduler.MultiStepLR(encoder_stream1_optimizer, milestones=[10, 50, 90],gamma=0.8)
     decoder_stream2_scheduler = torch.optim.lr_scheduler.MultiStepLR(decoder_stream1_optimizer, milestones=[10, 50, 90],gamma=0.8)
 
@@ -137,8 +144,7 @@ def trainIters(n_epochs, train_dataloader, valid_dataloader, train2_dataloader, 
     # decoder_stream1.load_state_dict(torch.load(decoder1loc))
     # decoder_stream1.eval()
     if s2 is True:
-        batch = load_batch(0, BS, 'pred', train_raw, pred_raw, train2_raw, pred2_raw, train_eig_raw,
-                           pred_eig_raw)
+        batch = load_batch(0, BS, 'pred', train_raw, pred_raw, train2_raw, pred2_raw, train_eig_raw,pred_eig_raw)
         _, _, batch = batch
         batch = np.asarray([batch[i] for i in range(len(batch))])
         batch_in_form = torch.Tensor(batch).to(device)
@@ -162,19 +168,17 @@ def trainIters(n_epochs, train_dataloader, valid_dataloader, train2_dataloader, 
         # Prepare train and test batch
         for bch in tqdm(range(num_batches),desc='train'):
             # print('# {}/{} epoch {}/{} batch'.format(epoch, n_epochs, bch, num_batches))
-            trainbatch_both = load_batch(bch, BS, 'train', train_raw, pred_raw, train2_raw, pred2_raw,
-                                         train_eig_raw, pred_eig_raw)
+            trainbatch_both = load_batch(bch, BS, 'train', train_raw, pred_raw, train2_raw, pred2_raw,train_eig_raw, pred_eig_raw)
             trainbatch, train_middle, trainbatch2 = trainbatch_both
             trainbatch_in_form = np.asarray([trainbatch[i]['sequence'] for i in range(BS)])
             trainbatch_in_form = torch.Tensor(trainbatch_in_form).to(device)
 
-            testbatch_both = load_batch(bch, BS, 'pred', train_raw, pred_raw, train2_raw, pred2_raw,
-                                        train_eig_raw, pred_eig_raw)
+            testbatch_both = load_batch(bch, BS, 'pred', train_raw, pred_raw, train2_raw, pred2_raw,train_eig_raw, pred_eig_raw)
             testbatch, test_middle, testbatch2 = testbatch_both
             testbatch_in_form = np.asarray([testbatch[i]['sequence'] for i in range(BS)])
             testbatch_in_form = torch.Tensor(testbatch_in_form).to(device)
-            # for data in train_dataloader:
 
+            ##stream2
             if s2 is True:
                 trainbatch2 = torch.Tensor(np.asarray([trainbatch2[i] for i in range(len(trainbatch2))]))
                 #eigs
@@ -185,21 +189,16 @@ def trainIters(n_epochs, train_dataloader, valid_dataloader, train2_dataloader, 
                 target_stream2_tensor = testbatch2
                 target_stream2_tensor = Variable(target_stream2_tensor.to(device))
                 # if s2 is True:
-                loss_stream2, output_stream2_decoder = train_stream2(input_stream2_tensor, target_stream2_tensor,
-                                                                     encoder_stream2, decoder_stream2,
-                                                                     encoder_stream2_optimizer,
-                                                                     decoder_stream2_optimizer)
+                loss_stream2, output_stream2_decoder = train_stream2(input_stream2_tensor, target_stream2_tensor,encoder_stream2, decoder_stream2,encoder_stream2_optimizer,decoder_stream2_optimizer)
                 print_loss_total_stream2 += loss_stream2
                 # print(f"loss_stream2: {loss_stream2}")
 
-            # s1 is always true
+            # stream1
             input_stream1_tensor = trainbatch_in_form
             #i个batch的agent_ID
             batch_agent_ids = [trainbatch[i]['agent_ID'] for i in range(BS)]
             target_stream1_tensor = testbatch_in_form
-            loss_stream1 = train_stream1(input_stream1_tensor, target_stream1_tensor, encoder_stream1, decoder_stream1,
-                                         encoder_stream1_optimizer, decoder_stream1_optimizer, output_stream2_decoder,
-                                         batch_agent_ids, test_middle, s2)
+            loss_stream1 = train_stream1(input_stream1_tensor, target_stream1_tensor, encoder_stream1, decoder_stream1,encoder_stream1_optimizer, decoder_stream1_optimizer, output_stream2_decoder,batch_agent_ids, test_middle, s2)
             # print(f"loss_stream1: {loss_stream1}")
             print_loss_total_stream1 += loss_stream1
 
@@ -207,10 +206,14 @@ def trainIters(n_epochs, train_dataloader, valid_dataloader, train2_dataloader, 
 
         encoder_stream1_scheduler.step()
         decoder_stream1_scheduler.step()
+        encoder_stream2_scheduler.step()
+        decoder_stream2_scheduler.step()
 
-
+        #loss1
         print('stream1 average loss:', print_loss_total_stream1 / num_batches)
         loss_stream1_all.append(print_loss_total_stream1 / num_batches)
+
+        #loss2
         if s2 is True:
             # print_loss_avg_stream2 = print_loss_total_stream2 / print_every
             # print_loss_total_stream2 = 0
@@ -222,9 +225,11 @@ def trainIters(n_epochs, train_dataloader, valid_dataloader, train2_dataloader, 
 
             # print('%s (%d %d%%) %.4f' % (timeSince(start, epoch / n_epochs),epoch, epoch / n_epochs * 100, print_loss_avg_stream2))
 
+        #save model
         #get the smallest loss of stream1 and stream2
         if epoch % save_every == 0:
             save_model(encoder_stream1, decoder_stream1, encoder_stream2, decoder_stream2, loss_stream1_all, loss_stream2_all, s2,MODEL_LOC,batch_size,n_epochs)
+            print(f"model saved at epoch {epoch}")
 
     # plot_loss_avg_stream1 = print_loss_total_stream1 / plot_every
     # plot_losses_stream1.append(plot_loss_avg_stream1)
@@ -235,17 +240,15 @@ def trainIters(n_epochs, train_dataloader, valid_dataloader, train2_dataloader, 
     # plot_loss_total_stream2 = 0
 
     #draw stream1 loss
-    makeplot(range(n_epochs), loss_stream1_all, "epoch", "loss", f"stream1_loss_{batch_size}_{n_epochs}_{learning_rate}_{graph}",
-             SAVE_LOC)
+    makeplot(range(n_epochs), loss_stream1_all, "epoch", "loss", f"stream1_loss_{batch_size}_{n_epochs}_{learning_rate}_{graph}",SAVE_LOC)
     #draw stream2 loss
     if s2 is True:
-        makeplot(range(n_epochs), loss_stream2_all, "epoch", "loss", f"stream2_loss_{batch_size}_{n_epochs}_{learning_rate}_{graph}",
-                 SAVE_LOC)
+        makeplot(range(n_epochs), loss_stream2_all, "epoch", "loss", f"stream2_loss_{batch_size}_{n_epochs}_{learning_rate}_{graph}",SAVE_LOC)
 
     #draw lr
     makeplot(range(n_epochs), lr_list, "epoch", "lr", f"lr_{batch_size}_{n_epochs}_{learning_rate}_{graph}",SAVE_LOC)
 
-    compute_accuracy_stream1(train_dataloader, valid_dataloader, encoder_stream1, decoder_stream1, n_epochs)
+    # compute_accuracy_stream1(train_dataloader, valid_dataloader, encoder_stream1, decoder_stream1, n_epochs)
     # showPlot(plot_losses)
     # save_model(encoder_stream1, decoder_stream1, encoder_stream2, decoder_stream2 , data, sufix, s2)
     return encoder_stream1, decoder_stream1
@@ -292,9 +295,15 @@ def train_stream1(input_tensor, target_tensor, encoder, decoder, encoder_optimiz
     #batch_size
     target_length = target_tensor.size(0)
 
-    Hidden_State, _ = encoder.loop(input_tensor)
-    #only mu_1, mu_2
-    _, _, mu_1, mu_2, log_sigma_1, log_sigma_2, rho = decoder.loop(Hidden_State)
+    # Hidden_State, _ = encoder.loop(input_tensor)
+    Hidden_State = encoder.forward(input_tensor,2,2)
+
+    #[BS,time_step,1]
+    # _, _, mu_1, mu_2, log_sigma_1, log_sigma_2, rho = decoder.loop(Hidden_State)
+    #[BS,time_step,fea_size]
+    mu= decoder.forward(Hidden_State,2,2)
+    mu_1=mu[:,:,0].unsqueeze(2)
+    mu_2=mu[:,:,1].unsqueeze(2)
 
     encoder_optimizer.zero_grad()
     decoder_optimizer.zero_grad()
@@ -303,9 +312,15 @@ def train_stream1(input_tensor, target_tensor, encoder, decoder, encoder_optimiz
     if s2 == True:
         cluster_centers = calculate_cluster_centers(batch_agent_ids, stream2_output, testbatch2)
         cluster_centers = Variable(torch.Tensor(cluster_centers).to(device))
-        loss = -log_likelihood(mu_1, mu_2, log_sigma_1, log_sigma_2, rho, target_tensor, cluster_centers).to(device)
+        # loss = -log_likelihood(mu_1, mu_2, log_sigma_1, log_sigma_2, rho, target_tensor, cluster_centers).to(device)
+        loss = MSE(mu_1, mu_2, target_tensor, cluster_centers).to(device)
+    # only s1
     else:
-        loss = -log_likelihood(mu_1, mu_2, log_sigma_1, log_sigma_2, rho, target_tensor, None).to(device)
+        # loss = -log_likelihood(mu_1, mu_2, log_sigma_1, log_sigma_2, rho, target_tensor, None).to(device)
+
+        #MSE
+        # only mu_1, mu_2
+        loss=MSE(mu_1, mu_2,target_tensor,None).to(device)
 
     loss = loss if loss > 0 else -1 * loss
     loss.backward()
@@ -368,6 +383,7 @@ def log_likelihood(mu_1, mu_2, log_sigma_1, log_sigma_2, rho, y, cluster_centers
     [batch_size, step_size, fea_size] = y.size()
 
     epoch_loss = 0
+    #第i帧
     for i in range(step_size):
         #only mu1_current,mu2_current
         mu1_current = mu_1[:, i, :]
@@ -375,44 +391,56 @@ def log_likelihood(mu_1, mu_2, log_sigma_1, log_sigma_2, rho, y, cluster_centers
         if cluster_centers is not None:
             muc_x = cluster_centers[:, i, 0]
             muc_y = cluster_centers[:, i, 1]
-        #
-        # sigma1_current = log_sigma_1[:, i, :]
-        # sigma2_current = log_sigma_2[:, i, :]
-        # rho_current = rho[:, i, :]
-        # y_current = y[:, i, :]
-        #
-        #
-        # if cluster_centers is None:
-        #     batch_loss = compute_sample_loss(mu1_current, mu2_current, sigma1_current, sigma2_current, rho_current,
-        #                                      y_current).sum()
-        # else:
-        #     batch_loss = compute_sample_loss(mu1_current, mu2_current, sigma1_current, sigma2_current, rho_current,
-        #                                      y_current).sum() + torch.sqrt(
-        #         torch.sum((mu1_current - muc_x) ** 2) + torch.sum((mu2_current - muc_y) ** 2))
 
+        sigma1_current = log_sigma_1[:, i, :]
+        sigma2_current = log_sigma_2[:, i, :]
+        rho_current = rho[:, i, :]
+        y_current = y[:, i, :]
 
-    ##############################################################
-        # MSE
-        loss=nn.MSELoss().to(device)
-        label= y[:, i, :]
-        pred=torch.squeeze(torch.stack((mu1_current,mu2_current),dim=2))
-        # print(label.shape)
-        # print(pred.shape)
 
         if cluster_centers is None:
-            batch_loss=loss(pred,label)
-        ## s2 is true, calculate cluster centers
+            batch_loss = compute_sample_loss(mu1_current, mu2_current, sigma1_current, sigma2_current, rho_current,y_current).sum()
         else:
-            batch_loss=loss(pred,label) + torch.sqrt(torch.sum((mu1_current - muc_x) ** 2)+ torch.sum((mu2_current - muc_y) ** 2))
-    ##############################################################
-    #
+            batch_loss = compute_sample_loss(mu1_current, mu2_current, sigma1_current, sigma2_current, rho_current,y_current).sum() + torch.sqrt(torch.sum((mu1_current - muc_x) ** 2) + torch.sum((mu2_current - muc_y) ** 2))
+
         batch_loss = batch_loss / batch_size
         epoch_loss += batch_loss
     # # print(epoch_loss)
 
+    return epoch_loss
 
+def MSE(mu_1, mu_2, y,cluster_centers):
+    [batch_size, step_size, fea_size] = y.size()
+
+    epoch_loss = 0
+    # 计算所有batch的第i帧的loss
+    for i in range(step_size):
+        # only mu1_current,mu2_current
+        mu1_current = mu_1[:, i, :]
+        mu2_current = mu_2[:, i, :]
+        if cluster_centers is not None:
+            muc_x = cluster_centers[:, i, 0]
+            muc_y = cluster_centers[:, i, 1]
+
+        loss = nn.MSELoss().to(device)
+        label = y[:, i, :]
+        #拼接为(x,y)
+        pred = torch.squeeze(torch.stack((mu1_current, mu2_current), dim=2))
+        # print(label.shape)
+        # print(pred.shape)
+
+        if cluster_centers is None:
+            batch_loss = loss(pred, label)
+        ## s2 is true, calculate cluster centers
+        else:
+            batch_loss = loss(pred, label) + torch.sqrt(torch.sum((mu1_current - muc_x) ** 2) + torch.sum((mu2_current - muc_y) ** 2))
+
+        #除以BS
+        batch_loss = batch_loss / batch_size
+        epoch_loss += batch_loss
 
     return epoch_loss
+
 
 
 def compute_sample_loss(mu_1, mu_2, log_sigma_1, log_sigma_2, rho, y):
@@ -447,14 +475,14 @@ def calculate_cluster_centers(agent_IDs, stream2_output, testbatch2):
     #num_steps
     num_steps = stream2_output.shape[1]
     # print('num_steps: ',num_steps)
-    print(f'size: [{num_batches},{num_steps},{stream2_output.shape[2]}]')
+    # print(f'size: [{num_batches},{num_steps},{stream2_output.shape[2]}]')
     #[num_batches, num_steps, 2]
     cluster_centers = np.zeros((num_batches, num_steps, 2))
     # three behaviors: overspeed，normal，slow
     km = KMeans(init='k-means++', n_clusters=3)
-    for t in tqdm(range(num_steps),desc='step'):
-        print(f'step: {t}')
-        for b in tqdm(range(len(testbatch2) - 1),desc='frame'):
+    for t in range(num_steps):
+        # print(f'step: {t}')
+        for b in range(len(testbatch2) - 1):
             #b个batch的t帧
             clusters = km.fit(stream2_output[b, t, :].reshape(-1, 1))
             #与预测目标相同cluster的agent
@@ -610,34 +638,34 @@ def makeplot(x, y, x_label, y_label, title, save_loc):
     plt.ylabel(y_label)
     plt.title(title)
 
-    #each 10 epoch show loss
+    #each 50 epoch show loss
     for i in range(len(x)):
-        if i % 10 == 0:
-            #取小数点后两位
-            plt.text(x[i], y[i], str(y[i])[:4],color='red',fontsize=10)
+        if i % 50 == 0:
+            #取小数点后6位
+            plt.text(x[i], y[i], str(round(y[i],4)),color='red',fontsize=10)
 
     # plt.show()
     fig.savefig(os.path.join(save_loc, title + '.png'))
     fig.clear()
 
 
-def MSE(y_pred, y_gt, device=device):
-    # y_pred = y_pred.numpy()
-    y_gt = y_gt.cpu().detach().numpy()
-    acc = np.zeros(np.shape(y_pred)[:-1])
-    muX = y_pred[:, :, 0]
-    muY = y_pred[:, :, 1]
-    x = np.array(y_gt[:, :, 0])
-    x = (x - np.mean(x)) / x.std()
-    y = np.array(y_gt[:, :, 1])
-    # muX = np.mean(x) + (x - np.mean(muX)) * (np.std(x))/(np.std(muX))
-    # muX = np.mean(x) + (x - np.mean(muX))
-    y = (y - np.mean(y)) / y.std()
-    # muY = np.mean(y) + (y -np.mean(muY)) * (np.std(y))/(np.std(muY))
-    # muY = np.mean(y) + (y -np.mean(muY))
-    acc = np.power(x - muX, 2) + np.power(y - muY, 2)
-    lossVal = np.sum(acc, axis=0) / len(acc)
-    return lossVal
+# def MSE(y_pred, y_gt, device=device):
+#     # y_pred = y_pred.numpy()
+#     y_gt = y_gt.cpu().detach().numpy()
+#     acc = np.zeros(np.shape(y_pred)[:-1])
+#     muX = y_pred[:, :, 0]
+#     muY = y_pred[:, :, 1]
+#     x = np.array(y_gt[:, :, 0])
+#     x = (x - np.mean(x)) / x.std()
+#     y = np.array(y_gt[:, :, 1])
+#     # muX = np.mean(x) + (x - np.mean(muX)) * (np.std(x))/(np.std(muX))
+#     # muX = np.mean(x) + (x - np.mean(muX))
+#     y = (y - np.mean(y)) / y.std()
+#     # muY = np.mean(y) + (y -np.mean(muY)) * (np.std(y))/(np.std(muY))
+#     # muY = np.mean(y) + (y -np.mean(muY))
+#     acc = np.power(x - muX, 2) + np.power(y - muY, 2)
+#     lossVal = np.sum(acc, axis=0) / len(acc)
+#     return lossVal
 
 
 def compute_eigs(train_stream2):

@@ -18,16 +18,24 @@ device = torch.device("cuda")
 s2 = False
 TRAIN = True
 EVAL = False
-graph= False
+graph= True
+
+# #选取某一个agent,car
+# agentID=2
 
 BS=256
 recording = 2
 recording = "{:02d}".format(int(recording))
 tracks_file = f"../rounD-dataset-v1.0/data/{recording}_tracks.csv"
 tracks=pd.read_csv(tracks_file)
+
+
+#选取开始和结束帧
+# start_frame=min(tracks[tracks.trackId==agentID]['frame'])
+# end_frame=max(tracks[tracks.trackId==agentID]['frame'])
 start_frame=min(tracks['frame'])
 end_frame=max(tracks['frame'])
-# end_frame= 1000
+
 
 DIR = f'../resources/data/{recording}/{BS}/{start_frame}_{end_frame}/'
 MODEL_DIR = f'../resources/trained_models/{recording}/{BS}/{start_frame}_{end_frame}/'
@@ -35,13 +43,13 @@ if not os.path.exists(MODEL_DIR):
     os.makedirs(MODEL_DIR)
 
 
-epochs = 100
+epochs = 400
 save_per_epochs = 20
 
 train_seq_len = 25 * 1
 pred_seq_len = 25 * 1
 
-learning_rate=1e-3
+learning_rate=1e-4
 
 
 #create folder to store plots
@@ -89,8 +97,7 @@ if __name__ == "__main__":
             tr_eig_seq = []
             pred_eig_seq = []
 
-        encoder1, decoder1 = trainIters(epochs, tr_seq_1, pred_seq_1, tr_seq_2, pred_seq_2, tr_eig_seq, pred_eig_seq,
-                                        DATA, SUFIX, s2, learning_rate=learning_rate,print_every=1, save_every=save_per_epochs)
+        encoder1, decoder1 = trainIters(epochs, tr_seq_1, pred_seq_1, tr_seq_2, pred_seq_2, tr_eig_seq, pred_eig_seq,DATA, SUFIX, s2, learning_rate=learning_rate,print_every=1, save_every=save_per_epochs)
 
     if EVAL:
         print('start evaluating {}{}...'.format(DATA, SUFIX))
