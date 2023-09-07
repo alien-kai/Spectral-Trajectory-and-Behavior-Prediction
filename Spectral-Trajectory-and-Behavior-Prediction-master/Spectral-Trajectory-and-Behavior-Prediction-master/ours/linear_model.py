@@ -61,15 +61,18 @@ class GCN(nn.Module):
         return x
 
 class Encoder(nn.Module):
-    def __init__(self, input_size, cell_size, hidden_size):
+    def __init__(self, input_size, num_agents, hidden_size):
         """
         cell_size is the size of cell_state.
         hidden_size is the size of hidden_state, or say the output_state of each step
         """
         super(Encoder, self).__init__()
 
-        self.cell_size = cell_size
-        self.fl = nn.Linear(input_size, hidden_size*16)
+        if graph is True:
+            self.num_agents = num_agents
+            self.fl = nn.Linear(input_size+self.num_agents, hidden_size*16)
+        else:
+            self.fl = nn.Linear(input_size, hidden_size*16)
         self.il = nn.Linear(hidden_size*16, hidden_size*64)
         self.ol = nn.Linear(hidden_size*64, hidden_size*128)
 
@@ -92,46 +95,64 @@ class Encoder(nn.Module):
         neighbors = list(KNN_IDs.keys())
 
         return neighbors
+        # return [1,2,3]
 
+    #adjacency matrix , 4 nearest neighbors
     def compute_A(self, xt):
         # return Variable(torch.Tensor(np.ones([xt.shape[0], xt.shape[0]])).cuda())
         xt = xt.cpu().detach().numpy()
+        #[25,25]
         A = np.zeros([xt.shape[0], xt.shape[0]])
         for i in range(len(xt)):
             if xt[i] is not None:
+                #取4个最近邻
                 neighbors = self.computeKNN(xt, i, 4)
             for neighbor in neighbors:
                 A[i][neighbor] = 1
         return Variable(torch.Tensor(A).cuda())
 
-    def forward(self, input, Hidden_State, Cell_State):
 
+    def forward(self,points,input, Hidden_State, Cell_State):
         # graph
         if graph is True:
-            gcn_feat = []
-            #[1,4]->[4,1]
+            res = torch.zeros([input.shape[0], input.shape[1], input.shape[2]]).cuda()
+            # [1,4]->[4,1]
             gcn_model = GCN(nfeat=1, nhid=4, nclass=1, dropout=0.5)
-            #batch_size
-            for j in range(input.shape[0]):
-                # [num_agents]
-                features = input[j, :]
-                #[batch_size, num_agents, 1]
-                #cordinations and adjacency matrix
-                gcn_feat.append(gcn_model(torch.unsqueeze(features, dim=1), self.compute_A(features)).cpu().detach().numpy())
-            input = nn.Parameter(torch.FloatTensor(np.asarray(gcn_feat)).cuda())
-            # [batch_size, num_agents]
-            input = torch.squeeze(input)
+            #time step:25
+            for i in range(input.shape[1]):
+                gcn_feat = []
+                input_ = torch.squeeze(input[:, i:i+1, :])
+                # batch_size:512
+                for j in range(input.shape[0]):
+                    # [num_agents]
+                    features = input_[j, :]
+                    # [batch_size, num_agents, 1]
+                    # cordinations and adjacency matrix
+                    gcn_feat.append(gcn_model(torch.unsqueeze(features, dim=1), self.compute_A(features)).cpu().detach().numpy())
+                input_t = nn.Parameter(torch.FloatTensor(np.asarray(gcn_feat)).cuda())
+                # [batch_size, num_agents]
+                input_t = torch.squeeze(input_t, dim=2)
+                #each time step
+                for j in range(input.shape[0]):
+                    res[j,i,:]=input_t[j,:]
 
-        # input = torch.cat((input, Hidden_State), 1)
+
+            #concatenate the input and hidden state
+            input=torch.cat((points,res),dim=2)
+        else:
+            input=points
 
         #hidden_size=input_size = 2
         #[batch_size, input_size + hidden_size = 4]
 
+        #[256,25,32]
         f= self.fl(input)
+        #[256,25,128]
         i= self.il(torch.relu(f))
+        #[256,25,512]
         o= self.ol(torch.relu(i))
         Hidden_State = self.lstm(torch.relu(o))
-
+        #GCN
         return Hidden_State[0]
 
 
@@ -162,8 +183,8 @@ class Decoder(nn.Module):
         self.lstm=nn.LSTM(hidden_size*16,hidden_size*16,batch_first=True)
         self.linear2=nn.Linear(hidden_size*16,input_size)
 
-
     def forward(self, input, Hidden_State, Cell_State):
+
         #combine the input and hidden state
         # input is ramdom if s1 is True
         #(batch_size,input_size+Hidden_State*self.multiplier)
