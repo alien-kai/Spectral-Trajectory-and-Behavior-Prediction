@@ -1,9 +1,10 @@
 from torch_geometric.nn import GCNConv
 import torch
 import torch.nn as nn
-from main import BS,train_seq_len
+from main import *
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print(device)
 
 
 class GCN(torch.nn.Module):
@@ -12,16 +13,12 @@ class GCN(torch.nn.Module):
         torch.manual_seed(12345)
         self.conv1 = GCNConv(input_size, hidden_size)
         self.conv2 = GCNConv(hidden_size, output_size)
-        self.classifier = nn.Linear(output_size, output_size)
 
     def forward(self, x, edge_index):
         h = self.conv1(x, edge_index)
-        h = h.tanh()
-        h = self.conv2(h, edge_index)
-        h = h.tanh()
-
-        # Apply a final (linear) classifier.
-        out = self.classifier(h)
+        # h = torch.sigmoid(h)
+        out = self.conv2(h, edge_index)
+        # out = torch.sigmoid(h)
 
         return out
 
@@ -32,8 +29,8 @@ class Encoder(torch.nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.fl = nn.Linear(input_size, hidden_size * 8)
-        self.lstm = nn.GRU(hidden_size*8, hidden_size*8, num_layers, batch_first=True)
+        self.fl = nn.Linear(input_size, hidden_size * 128)
+        self.lstm = nn.GRU(hidden_size * 128, hidden_size*128, num_layers, batch_first=True)
 
     def forward(self, input):
         f = self.fl(input)
@@ -48,9 +45,9 @@ class Decoder(torch.nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.dropout = nn.Dropout(p=dropout)
-        self.fl = nn.Linear(hidden_size * 8, hidden_size * 8)
-        self.lstm = nn.GRU(hidden_size*8, output_size, num_layers, batch_first=True)
-        self.linear = nn.Linear(output_size, output_size)
+        self.fl = nn.Linear(hidden_size * 128, hidden_size * 128)
+        self.lstm = nn.GRU(hidden_size*128, output_size*128, num_layers, batch_first=True)
+        self.linear = nn.Linear(output_size*128, output_size)
 
     def forward(self, input):
         f = self.fl(input)
@@ -67,13 +64,15 @@ class Model(nn.Module):
         self.decoder = Decoder(hidden_size, output_size, num_layers,dropout=dropout)
 
     def forward(self, input):
-        res = torch.zeros([len(input), input[0].num_edges // 2 + 1, 2]).to(device)
+        res = torch.zeros([len(input), train_seq_len, 2]).to(device)
         for i in range(len(input)):
-            # print(i)
-            h = self.gcn(input[i].x, input[i].edge_index).to(device)
-            # print(h.shape)
-            res[i] = h
-        res = res.view(BS, train_seq_len, -1)
+            for j in range(len(input[0])):
+                # print(i)
+                h = self.gcn(input[i][j].x, input[i][j].edge_index).to(device)
+                # print(h.shape)
+                h = h[agent]
+                res[i][j] = h
+                # res = res.view(BS, train_seq_len, -1)
         output = self.encoder(res)
         output = self.decoder(output)
         return output
